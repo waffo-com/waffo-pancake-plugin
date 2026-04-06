@@ -6,6 +6,7 @@ import { createQueryStatusTool } from "./tools/query-status";
 import { createRetryEventTool } from "./tools/retry-event";
 import { createJsonStore } from "./store/json-store";
 import { createTunnelManager } from "./tunnel/cloudflare";
+import { createRelayClient } from "./relay/client";
 import { pluginConfigSchema } from "./config";
 import { logger } from "./utils/logger";
 
@@ -21,7 +22,7 @@ export default {
     const config = pluginConfigSchema.parse(api.pluginConfig ?? {});
     const store = createJsonStore(STATE_FILE);
 
-    // HTTP Route: receive Pancake webhooks
+    // HTTP Route
     const handleWebhook = createWebhookHandler(api, store);
     api.registerHttpRoute({
       path: "/pancake/webhook",
@@ -30,34 +31,60 @@ export default {
       handler: (req: any, res: any) => handleWebhook(req, res),
     });
 
-    // Tools: agent-callable
+    // Tools
     api.registerTool(createQueryEventsTool(store));
     api.registerTool(createQueryStatusTool(store));
     api.registerTool(createRetryEventTool(api, store));
 
-    // Tunnel: auto-start Cloudflare Tunnel for local deployments
-    const tunnelManager = createTunnelManager(config.tunnel);
-    tunnelManager.start().then((url) => {
-      if (url) {
-        const webhookUrl = `${url}/pancake/webhook`;
-        logger.info("=".repeat(60));
-        logger.info("Pancake plugin ready!");
-        logger.info(`Webhook URL: ${webhookUrl}`);
-        logger.info("Copy this URL to Pancake Dashboard → Settings → Webhooks");
-        logger.info("=".repeat(60));
-      } else {
-        logger.info("Pancake plugin registered — webhook at /pancake/webhook");
-        logger.info("Tunnel disabled — ensure OpenClaw is publicly accessible");
-      }
-    }).catch((err) => {
-      logger.warn(`Tunnel failed to start: ${err}`);
+    // Startup: tunnel → relay → output webhook URL
+    startNetworking(store, config).catch((err) => {
+      logger.error("Networking setup failed:", err);
       logger.info("Pancake plugin registered — webhook at /pancake/webhook");
-      logger.info("Please set up a public URL manually (cloudflared/ngrok/etc)");
+      logger.info("Please set up a public URL manually");
     });
 
-    // Cleanup tunnel on process exit
-    process.on("beforeExit", () => tunnelManager.stop());
-    process.on("SIGINT", () => { tunnelManager.stop(); process.exit(0); });
-    process.on("SIGTERM", () => { tunnelManager.stop(); process.exit(0); });
+    // Cleanup
+    process.on("SIGINT", () => process.exit(0));
+    process.on("SIGTERM", () => process.exit(0));
   },
 };
+
+async function startNetworking(
+  store: ReturnType<typeof createJsonStore>,
+  config: ReturnType<typeof pluginConfigSchema.parse>,
+) {
+  // 1. Get or create permanent plugin ID
+  const pluginId = await store.getOrCreatePluginId();
+  const relay = createRelayClient(pluginId);
+
+  // 2. Start tunnel
+  const tunnelManager = createTunnelManager(config.tunnel);
+  const tunnelUrl = await tunnelManager.start();
+
+  if (!tunnelUrl) {
+    // Tunnel disabled — user manages their own public URL
+    logger.info("Pancake plugin registered — webhook at /pancake/webhook");
+    logger.info(`Relay webhook URL: ${relay.getWebhookUrl()}/pancake/webhook`);
+    logger.info("Tunnel disabled — register your public URL with relay manually");
+    return;
+  }
+
+  // 3. Register tunnel URL with relay
+  const registered = await relay.register(`${tunnelUrl}/pancake/webhook`);
+
+  // 4. Output the permanent webhook URL
+  const webhookUrl = `${relay.getWebhookUrl()}/pancake/webhook`;
+  logger.info("=".repeat(60));
+  logger.info("Pancake plugin ready!");
+  if (registered) {
+    logger.info(`Webhook URL: ${webhookUrl}`);
+    logger.info("This URL is permanent — configure it once in Pancake Dashboard.");
+  } else {
+    logger.info(`Relay unavailable — use tunnel URL directly: ${tunnelUrl}/pancake/webhook`);
+    logger.info("(This URL will change on restart)");
+  }
+  logger.info("=".repeat(60));
+
+  // Cleanup tunnel on exit
+  process.on("beforeExit", () => tunnelManager.stop());
+}

@@ -1,6 +1,8 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
 import type { PancakeState, PancakeEvent, ProcessingStatus, EventRecord, AgentResult } from "../types";
+import { logger } from "../utils/logger";
 
 const MAX_EVENTS = 200;
 const MAX_PROCESSED_IDS = 1000;
@@ -8,6 +10,7 @@ const MAX_PROCESSED_IDS = 1000;
 function defaultState(): PancakeState {
   return {
     processedIds: [],
+    pluginId: null,
     events: [],
     stats: { totalReceived: 0, totalTriggered: 0, totalFailed: 0, lastEventAt: null },
   };
@@ -98,7 +101,17 @@ export function createJsonStore(filePath: string) {
     return state.processedIds.includes(deliveryId);
   }
 
-  return { loadState, saveState, saveEvent, updateEventStatus, addProcessedId, hasProcessedId };
+  async function getOrCreatePluginId(): Promise<string> {
+    const state = await loadState();
+    if (state.pluginId) return state.pluginId;
+
+    const newId = randomUUID();
+    await saveState({ ...state, pluginId: newId });
+    logger.info(`Generated new plugin ID: ${newId}`);
+    return newId;
+  }
+
+  return { loadState, saveState, saveEvent, updateEventStatus, addProcessedId, hasProcessedId, getOrCreatePluginId };
 }
 
 export type JsonStore = ReturnType<typeof createJsonStore>;

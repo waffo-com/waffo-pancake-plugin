@@ -90,6 +90,7 @@ export interface EventRecord {
 
 export interface PancakeState {
   processedIds: string[];
+  pluginId: string | null;
   events: EventRecord[];
   stats: {
     totalReceived: number;

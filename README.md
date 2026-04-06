@@ -15,34 +15,47 @@ openclaw plugins install @waffo/pancake
 3. In Pancake Dashboard → Settings → Webhooks, add the URL and select events
 4. Done — the Agent will notify you on your connected channels when events occur
 
-## Tunnel (Local Deployment)
+## Networking (Local Deployment)
 
-If OpenClaw runs locally, the plugin **automatically starts a Cloudflare Tunnel** so Pancake can reach your webhook. No Cloudflare account needed.
+If OpenClaw runs locally, the plugin automatically handles public URL setup:
+
+1. **Starts a Cloudflare Tunnel** — exposes your local webhook endpoint
+2. **Registers with Waffo Relay** — gets a **permanent** webhook URL
 
 On startup you'll see:
 ```
-✓ Pancake plugin ready!
-✓ Webhook URL: https://abc-xyz.trycloudflare.com/pancake/webhook
-📋 Copy this URL to Pancake Dashboard → Settings → Webhooks
+============================================================
+Pancake plugin ready!
+Webhook URL: https://relay.waffo.ai/webhook/a1b2c3d4-.../pancake/webhook
+This URL is permanent — configure it once in Pancake Dashboard.
+============================================================
 ```
 
-**Quick Tunnel** (default): Free, no account needed. URL changes on restart — suitable for development and testing.
+**This URL never changes**, even when OpenClaw restarts. Configure it once in Pancake Dashboard and forget about it.
 
-**Named Tunnel** (production): Stable custom domain. Requires a free Cloudflare account and tunnel token.
+### How it works
 
+- Plugin generates a unique ID on first install (stored locally)
+- Each startup: tunnel gets a new random URL → plugin registers it with Waffo Relay
+- Pancake sends webhooks to the relay → relay forwards to your current tunnel
+- Relay doesn't store webhook data, only forwards in real-time
+
+### Configuration
+
+To disable tunnel (cloud deployment with stable public URL):
+```json
+{
+  "tunnel": { "enabled": false }
+}
+```
+
+For production with stable tunnel (requires Cloudflare account):
 ```json
 {
   "tunnel": {
     "type": "named",
     "namedTunnelToken": "your-token-here"
   }
-}
-```
-
-To disable the tunnel (cloud deployment):
-```json
-{
-  "tunnel": { "enabled": false }
 }
 ```
 
