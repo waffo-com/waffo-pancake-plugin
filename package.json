@@ -17,6 +17,7 @@
   "author": "Waffo Team",
   "license": "MIT",
   "dependencies": {
+    "cloudflared": "^0.6.0",
     "zod": "^3.23.0"
   },
   "peerDependencies": {

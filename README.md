@@ -15,6 +15,37 @@ openclaw plugins install @waffo/pancake
 3. In Pancake Dashboard → Settings → Webhooks, add the URL and select events
 4. Done — the Agent will notify you on your connected channels when events occur
 
+## Tunnel (Local Deployment)
+
+If OpenClaw runs locally, the plugin **automatically starts a Cloudflare Tunnel** so Pancake can reach your webhook. No Cloudflare account needed.
+
+On startup you'll see:
+```
+✓ Pancake plugin ready!
+✓ Webhook URL: https://abc-xyz.trycloudflare.com/pancake/webhook
+📋 Copy this URL to Pancake Dashboard → Settings → Webhooks
+```
+
+**Quick Tunnel** (default): Free, no account needed. URL changes on restart — suitable for development and testing.
+
+**Named Tunnel** (production): Stable custom domain. Requires a free Cloudflare account and tunnel token.
+
+```json
+{
+  "tunnel": {
+    "type": "named",
+    "namedTunnelToken": "your-token-here"
+  }
+}
+```
+
+To disable the tunnel (cloud deployment):
+```json
+{
+  "tunnel": { "enabled": false }
+}
+```
+
 ## Supported Events
 
 | Event | Description |

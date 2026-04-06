@@ -16,6 +16,32 @@
         "type": "string",
         "enum": ["debug", "info", "warn", "error"],
         "default": "info"
+      },
+      "tunnel": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Auto-start Cloudflare Tunnel for local deployments"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["quick", "named"],
+            "default": "quick",
+            "description": "quick = free random URL (dev/test), named = stable custom domain (prod)"
+          },
+          "namedTunnelToken": {
+            "type": "string",
+            "description": "Cloudflare Tunnel token (required for type=named)",
+            "sensitive": true
+          },
+          "port": {
+            "type": "number",
+            "default": 18789,
+            "description": "Local OpenClaw gateway port"
+          }
+        }
       }
     }
   }
