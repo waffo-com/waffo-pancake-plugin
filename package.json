@@ -1,0 +1,30 @@
+{
+  "name": "@waffo/pancake",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin for Pancake payment webhook events",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "openclaw.plugin.json"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": ["openclaw", "openclaw-plugin", "pancake", "webhook", "payment"],
+  "author": "Waffo Team",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.1.0",
+    "@types/node": "^22.0.0"
+  }
+}
