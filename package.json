@@ -1,6 +1,6 @@
 {
   "name": "@waffo-pancake/openclaw-plugin",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "OpenClaw plugin for Pancake payment webhook events",
   "type": "module",
   "main": "dist/index.js",
