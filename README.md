@@ -104,17 +104,71 @@ Pancake 支付通知
 | `refund.succeeded` | 退款成功 |
 | `refund.failed` | 退款失败 |
 
+## Hermes Agent 兼容
+
+Pancake Webhook 同样支持 [Hermes Agent](https://github.com/NousResearch/hermes-agent)。Hermes 内置 webhook 适配器，无需安装额外插件。
+
+### 配置方式
+
+在 Hermes 的 `config.yaml` 中添加：
+
+```yaml
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      routes:
+        pancake:
+          secret: "INSECURE_NO_AUTH"
+          events: []
+          prompt: |
+            Pancake 支付通知
+            📦 事件: {eventType}
+            商品: {data.productName}
+            金额: {data.amount} {data.currency}
+            买家: {data.buyerEmail}
+            时间: {timestamp}
+            事件ID: {eventId}
+            模式: {mode}
+          deliver: "telegram"
+          deliver_extra:
+            chat_id: "你的chat_id"
+```
+
+支持的 `deliver` 目标：`telegram`、`discord`、`slack`、`feishu`、`dingtalk`、`weixin`、`wecom`、`matrix`、`email`、`sms` 等 18+ 渠道。
+
+### 配置 Webhook URL
+
+**方式一：Hermes 有公网地址**
+
+直接在 Pancake Dashboard 填写：
+```
+http://your-server:8644/webhooks/pancake
+```
+
+**方式二：Hermes 在本地运行**
+
+使用 Waffo Relay 获取永久 URL：
+```bash
+# 注册 Hermes 的 webhook 端点到 Relay
+curl -X POST https://waffo-pancake-webhook-relay.vercel.app/register \
+  -H "Content-Type: application/json" \
+  -d '{"pluginId":"your-uuid","targetUrl":"http://localhost:8644/webhooks/pancake"}'
+```
+
+然后在 Pancake Dashboard 填写返回的 `webhookUrl`。
+
 ## 工作原理
 
 ```
-Pancake → Waffo Relay (Vercel) → Cloudflare Tunnel → OpenClaw 插件 → IM 通知
+Pancake → Waffo Relay (Vercel) → Agent (OpenClaw / Hermes) → IM 通知
 ```
 
-- 插件启动时自动创建 Cloudflare Tunnel（免费，无需账号）
-- Tunnel URL 注册到 Waffo Relay 服务，获得永久 Webhook URL
-- Pancake 发送 Webhook → Relay 实时转发 → 插件处理 → 通过 Gateway 发送 IM 通知
+- **OpenClaw**：插件自动创建 Tunnel + 注册 Relay，零配置
+- **Hermes**：使用内置 webhook 适配器，配置 `config.yaml` 即可
 
-## Agent Tools
+## Agent Tools (OpenClaw)
 
 | Tool | 说明 |
 |---|---|
@@ -122,7 +176,7 @@ Pancake → Waffo Relay (Vercel) → Cloudflare Tunnel → OpenClaw 插件 → I
 | `pancake_status` | 插件状态和统计信息 |
 | `pancake_retry_event` | 手动重试失败的事件 |
 
-## 完整配置项
+## 完整配置项 (OpenClaw)
 
 | 选项 | 默认值 | 说明 |
 |---|---|---|
