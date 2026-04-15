@@ -2,8 +2,26 @@
 
 Pancake 支付事件 OpenClaw 插件。接收 Pancake 平台的支付、订阅、退款事件，自动通过飞书/Telegram/Slack 等 IM 渠道通知商户。
 
-## 安装
+## 安装 & 配置（一键）
 
+```bash
+npx -p @waffo-pancake/openclaw-plugin pancake-setup
+```
+
+交互式向导会自动完成：
+1. 安装插件到 `~/.openclaw/extensions/pancake`
+2. 扫描已有 Agent，选择通知目标（飞书/Telegram/Slack 等）
+3. 选择运行模式（test/prod）
+4. 写入 `openclaw.json` 配置
+
+### 手动安装
+
+如果需要手动配置，参考以下步骤：
+
+<details>
+<summary>展开手动安装步骤</summary>
+
+**安装插件：**
 ```bash
 mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
   && npm pack @waffo-pancake/openclaw-plugin \
@@ -11,10 +29,7 @@ mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
   && npm install --omit=dev
 ```
 
-## 配置
-
-编辑 `~/.openclaw/openclaw.json`，在 `plugins` 中添加：
-
+**编辑 `~/.openclaw/openclaw.json`：**
 ```json
 {
   "plugins": {
@@ -33,14 +48,12 @@ mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
         "source": "local",
         "spec": "@waffo-pancake/openclaw-plugin",
         "installPath": "~/.openclaw/extensions/pancake",
-        "version": "0.2.0"
+        "version": "0.3.0"
       }
     }
   }
 }
 ```
-
-### agentId 配置
 
 `agentId` 决定通知发送到哪个 IM 渠道，格式为 `{channel}-{target}`：
 
@@ -52,6 +65,8 @@ mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
 | `discord-9876` | Discord |
 
 在 OpenClaw 管理界面「代理」页面可以找到你的 Agent ID。
+
+</details>
 
 ## 获取 Webhook URL
 

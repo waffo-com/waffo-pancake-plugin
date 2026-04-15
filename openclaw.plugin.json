@@ -2,7 +2,7 @@
   "id": "pancake",
   "name": "Pancake Webhook",
   "description": "接收 Pancake 支付事件，触发 OpenClaw Agent 自动通知与交付",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "configSchema": {
     "type": "object",
     "properties": {
