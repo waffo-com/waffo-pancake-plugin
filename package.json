@@ -1,6 +1,6 @@
 {
   "name": "@waffo-pancake/openclaw-plugin",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "OpenClaw plugin for Pancake payment webhook events",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,8 @@
   },
   "bin": {
     "pancake-setup": "./bin/setup.mjs",
-    "waffo-pancake": "./bin/setup.mjs"
+    "waffo-pancake": "./bin/setup.mjs",
+    "pancake-hermes-setup": "./bin/hermes-setup.mjs"
   },
   "files": [
     "dist",
