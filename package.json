@@ -1,18 +1,24 @@
 {
   "name": "@waffo-pancake/openclaw-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "OpenClaw plugin for Pancake payment webhook events",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
   "bin": {
     "pancake-setup": "./bin/setup.mjs",
     "waffo-pancake": "./bin/setup.mjs"
   },
-  "files": ["dist", "openclaw.plugin.json", "bin"],
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "bin"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -20,7 +26,13 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["openclaw", "openclaw-plugin", "pancake", "webhook", "payment"],
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "pancake",
+    "webhook",
+    "payment"
+  ],
   "author": "Waffo Team",
   "license": "MIT",
   "dependencies": {
