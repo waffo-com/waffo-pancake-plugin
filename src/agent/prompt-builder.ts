@@ -18,19 +18,13 @@ export function buildPrompt(event: PancakeEvent): string {
   const eventLabel = EVENT_LABELS[originalType] ?? originalType;
   const modePrefix = mode === "test" ? "[TEST] " : "";
 
-  return `${modePrefix}Pancake 支付事件通知:
-
-事件: ${eventLabel}
-类别: ${category}
-状态: ${status}
+  return `${modePrefix}Pancake 支付通知
+📦 ${eventLabel}
 商品: ${summary.productName}
 金额: ${summary.amount} ${summary.currency}
-买家: ${maskEmail(summary.buyerEmail)}
-事件ID: ${eventId}
-交付ID: ${deliveryId}
+买家: ${summary.buyerEmail}
 时间: ${event.timestamp}
-
-请将此事件通知给商户。`;
+事件ID: ${eventId}`;
 }
 
 function maskEmail(email: string): string {

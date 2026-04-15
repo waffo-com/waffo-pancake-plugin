@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const pluginConfigSchema = z.object({
   mode: z.enum(["test", "prod"]).default("test"),
+  agentId: z.string().optional(),
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
   tunnel: z.object({
     enabled: z.boolean().default(true),

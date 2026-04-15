@@ -43,10 +43,9 @@ describe("buildPrompt", () => {
     expect(prompt).not.toContain("[TEST]");
   });
 
-  it("includes the event ID and delivery ID", () => {
+  it("includes the event ID", () => {
     const prompt = buildPrompt(makeEvent());
     expect(prompt).toContain("PAY_p1");
-    expect(prompt).toContain("whd_p1");
   });
 
   it("handles subscription.past_due event", () => {
@@ -56,7 +55,6 @@ describe("buildPrompt", () => {
       status: "failed",
     }));
     expect(prompt).toContain("订阅欠费");
-    expect(prompt).toContain("failed");
   });
 
   it("masks short emails correctly", () => {

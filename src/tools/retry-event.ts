@@ -1,9 +1,9 @@
-import { triggerAgent } from "../agent/trigger";
+import { triggerAgent, type TriggerOptions } from "../agent/trigger";
 import type { JsonStore } from "../store/json-store";
 
 export function createRetryEventTool(
-  api: { runtime: { agent: { runEmbeddedPiAgent: (opts: { sessionId: string; prompt: string }) => Promise<unknown> } } },
   store: JsonStore,
+  triggerOptions: TriggerOptions = {},
 ) {
   return {
     name: "pancake_retry_event",
@@ -19,7 +19,7 @@ export function createRetryEventTool(
       const state = await store.loadState();
       const record = state.events.find((e) => e.deliveryId === params.deliveryId);
       if (!record) return { error: "Event not found" };
-      const result = await triggerAgent(api, record.event);
+      const result = await triggerAgent(record.event, triggerOptions);
       await store.updateEventStatus(params.deliveryId, result.success ? "agent_triggered" : "agent_failed", {
         agentResult: result,
       });

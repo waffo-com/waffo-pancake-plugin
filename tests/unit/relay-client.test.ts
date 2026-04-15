@@ -8,7 +8,7 @@ describe("RelayClient", () => {
 
   it("returns permanent webhook URL based on pluginId", () => {
     const client = createRelayClient("test-uuid-123");
-    expect(client.getWebhookUrl()).toBe("https://relay.waffo.ai/webhook/test-uuid-123");
+    expect(client.getWebhookUrl()).toBe("https://waffo-pancake-webhook-relay.vercel.app/webhook/test-uuid-123");
     expect(client.getPluginId()).toBe("test-uuid-123");
   });
 
@@ -21,7 +21,7 @@ describe("RelayClient", () => {
     const result = await client.register("https://abc.trycloudflare.com");
 
     expect(result).toBe(true);
-    expect(fetchSpy).toHaveBeenCalledWith("https://relay.waffo.ai/register", {
+    expect(fetchSpy).toHaveBeenCalledWith("https://waffo-pancake-webhook-relay.vercel.app/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

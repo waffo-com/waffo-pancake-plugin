@@ -76,6 +76,7 @@ export type ProcessingStatus =
 export interface AgentResult {
   success: boolean;
   sessionId?: string;
+  responseText?: string;
   error?: string;
 }
 

@@ -1,8 +1,8 @@
 {
-  "id": "@waffo/pancake",
+  "id": "pancake",
   "name": "Pancake Webhook",
   "description": "接收 Pancake 支付事件，触发 OpenClaw Agent 自动通知与交付",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "configSchema": {
     "type": "object",
     "properties": {
@@ -11,6 +11,10 @@
         "enum": ["test", "prod"],
         "default": "test",
         "description": "Pancake environment mode"
+      },
+      "agentId": {
+        "type": "string",
+        "description": "OpenClaw Agent ID to receive webhook notifications (e.g. feishu-ou_55a5fed66adc...)"
       },
       "logLevel": {
         "type": "string",

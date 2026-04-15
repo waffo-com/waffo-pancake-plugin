@@ -5,6 +5,8 @@ interface TunnelResult {
   stop: () => void;
 }
 
+const TUNNEL_STARTUP_TIMEOUT_MS = 30_000;
+
 /**
  * Start a Cloudflare Quick Tunnel (TryCloudflare).
  * - No Cloudflare account needed
@@ -22,14 +24,34 @@ export async function startQuickTunnel(port: number): Promise<TunnelResult> {
     const t = Tunnel.quick(`http://localhost:${port}`);
 
     const url = await new Promise<string>((resolve, reject) => {
-      t.once("url", (u: string) => resolve(u));
-      t.once("error", (err: Error) => reject(err));
+      const timeout = setTimeout(() => {
+        reject(new Error("Tunnel startup timed out after 30s"));
+      }, TUNNEL_STARTUP_TIMEOUT_MS);
+
+      t.once("url", (u: string) => {
+        clearTimeout(timeout);
+        resolve(u);
+      });
+
+      t.once("error", (err: Error) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+
+      (t as any).once("close", (code: number | null) => {
+        clearTimeout(timeout);
+        reject(new Error(`cloudflared exited with code ${code} before establishing tunnel`));
+      });
     });
 
     logger.info(`Tunnel active: ${url}`);
 
     t.once("connected", () => {
       logger.info("Tunnel connections established");
+    });
+
+    (t as any).once("close", (code: number | null) => {
+      logger.warn(`Tunnel process exited unexpectedly (code ${code})`);
     });
 
     return {
@@ -60,8 +82,24 @@ export async function startNamedTunnel(token: string): Promise<TunnelResult> {
 
     // Named tunnels don't emit a URL — wait for first connection
     await new Promise<void>((resolve, reject) => {
-      t.once("connected", () => resolve());
-      t.once("error", (err: Error) => reject(err));
+      const timeout = setTimeout(() => {
+        reject(new Error("Named tunnel startup timed out after 30s"));
+      }, TUNNEL_STARTUP_TIMEOUT_MS);
+
+      t.once("connected", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      t.once("error", (err: Error) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+
+      (t as any).once("close", (code: number | null) => {
+        clearTimeout(timeout);
+        reject(new Error(`cloudflared exited with code ${code}`));
+      });
     });
 
     logger.info("Named tunnel connections established");

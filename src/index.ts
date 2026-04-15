@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { existsSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { createWebhookHandler } from "./routes/webhook";
 import { createQueryEventsTool } from "./tools/query-events";
 import { createQueryStatusTool } from "./tools/query-status";
@@ -11,9 +12,45 @@ import { pluginConfigSchema } from "./config";
 import { logger } from "./utils/logger";
 
 const STATE_FILE = join(homedir(), ".openclaw", "pancake-state.json");
+const LOCK_FILE = join(homedir(), ".openclaw", "pancake-tunnel.lock");
+
+/**
+ * Cross-process lock using PID file.
+ * Returns true if this process acquired the lock.
+ */
+function acquireTunnelLock(): boolean {
+  if (existsSync(LOCK_FILE)) {
+    try {
+      const pid = parseInt(readFileSync(LOCK_FILE, "utf8").trim(), 10);
+      // Check if PID is still running
+      process.kill(pid, 0);
+      // Process is alive — another instance owns the tunnel
+      logger.info(`Tunnel already managed by PID ${pid}, skipping`);
+      return false;
+    } catch {
+      // Process not running — stale lock, take over
+      logger.info("Removing stale tunnel lock");
+    }
+  }
+  writeFileSync(LOCK_FILE, String(process.pid), "utf8");
+  return true;
+}
+
+function releaseTunnelLock(): void {
+  try {
+    if (existsSync(LOCK_FILE)) {
+      const pid = parseInt(readFileSync(LOCK_FILE, "utf8").trim(), 10);
+      if (pid === process.pid) {
+        unlinkSync(LOCK_FILE);
+      }
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
 
 export default {
-  id: "@waffo/pancake",
+  id: "pancake",
   name: "Pancake Webhook",
   description: "接收 Pancake 支付事件，触发 OpenClaw Agent 自动通知与交付",
   configSchema: pluginConfigSchema,
@@ -22,8 +59,11 @@ export default {
     const config = pluginConfigSchema.parse(api.pluginConfig ?? {});
     const store = createJsonStore(STATE_FILE);
 
+    // Notification delivery via gateway send RPC
+    const triggerOptions = { agentId: config.agentId };
+
     // HTTP Route
-    const handleWebhook = createWebhookHandler(api, store);
+    const handleWebhook = createWebhookHandler(store, triggerOptions);
     api.registerHttpRoute({
       path: "/pancake/webhook",
       auth: "plugin",
@@ -34,18 +74,22 @@ export default {
     // Tools
     api.registerTool(createQueryEventsTool(store));
     api.registerTool(createQueryStatusTool(store));
-    api.registerTool(createRetryEventTool(api, store));
+    api.registerTool(createRetryEventTool(store, triggerOptions));
 
-    // Startup: tunnel → relay → output webhook URL
-    startNetworking(store, config).catch((err) => {
-      logger.error("Networking setup failed:", err);
-      logger.info("Pancake plugin registered — webhook at /pancake/webhook");
-      logger.info("Please set up a public URL manually");
-    });
+    // Startup: tunnel → relay (cross-process singleton via lock file)
+    if (acquireTunnelLock()) {
+      startNetworking(store, config).catch((err) => {
+        logger.error("Networking setup failed:", err);
+        logger.info("Pancake plugin registered — webhook at /pancake/webhook");
+        logger.info("Please set up a public URL manually");
+        releaseTunnelLock();
+      });
 
-    // Cleanup
-    process.on("SIGINT", () => process.exit(0));
-    process.on("SIGTERM", () => process.exit(0));
+      // Release lock on exit
+      process.on("SIGINT", () => { releaseTunnelLock(); process.exit(0); });
+      process.on("SIGTERM", () => { releaseTunnelLock(); process.exit(0); });
+      process.on("exit", () => releaseTunnelLock());
+    }
   },
 };
 
@@ -64,7 +108,7 @@ async function startNetworking(
   if (!tunnelUrl) {
     // Tunnel disabled — user manages their own public URL
     logger.info("Pancake plugin registered — webhook at /pancake/webhook");
-    logger.info(`Relay webhook URL: ${relay.getWebhookUrl()}/pancake/webhook`);
+    logger.info(`Relay webhook URL: ${relay.getWebhookUrl()}`);
     logger.info("Tunnel disabled — register your public URL with relay manually");
     return;
   }
@@ -73,7 +117,7 @@ async function startNetworking(
   const registered = await relay.register(`${tunnelUrl}/pancake/webhook`);
 
   // 4. Output the permanent webhook URL
-  const webhookUrl = `${relay.getWebhookUrl()}/pancake/webhook`;
+  const webhookUrl = relay.getWebhookUrl();
   logger.info("=".repeat(60));
   logger.info("Pancake plugin ready!");
   if (registered) {

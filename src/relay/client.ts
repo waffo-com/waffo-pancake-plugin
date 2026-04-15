@@ -1,6 +1,6 @@
 import { logger } from "../utils/logger";
 
-const RELAY_BASE_URL = "https://relay.waffo.ai";
+const RELAY_BASE_URL = "https://waffo-pancake-webhook-relay.vercel.app";
 
 export interface RelayClient {
   register: (targetUrl: string) => Promise<boolean>;

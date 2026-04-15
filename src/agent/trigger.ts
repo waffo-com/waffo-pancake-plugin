@@ -1,23 +1,82 @@
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import { existsSync } from "node:fs";
 import { buildPrompt } from "./prompt-builder";
 import { logger } from "../utils/logger";
 import type { PancakeEvent, AgentResult } from "../types";
 
-export async function triggerAgent(
-  api: { runtime: { agent: { runEmbeddedPiAgent: (opts: { sessionId: string; prompt: string }) => Promise<unknown> } } },
-  event: PancakeEvent,
-): Promise<AgentResult> {
-  const prompt = buildPrompt(event);
-  const sessionId = `pancake-${event.storeId}-${event.mode}`;
+const execAsync = promisify(exec);
 
-  logger.info(`Triggering agent for ${event.deliveryId} (session: ${sessionId})`);
+/** Resolve openclaw binary path at module load time */
+const OPENCLAW_BIN = [
+  "/opt/homebrew/bin/openclaw",
+  "/usr/local/bin/openclaw",
+].find((p) => existsSync(p)) ?? "openclaw";
+
+export interface TriggerOptions {
+  agentId?: string;
+}
+
+/**
+ * Parse agentId to extract channel and delivery target.
+ * e.g. "feishu-ou_55a5fed66adc..." → { channel: "feishu", to: "ou_55a5fed66adc..." }
+ */
+function parseDeliveryTarget(agentId: string): { channel: string; to: string } | null {
+  const dashIndex = agentId.indexOf("-");
+  if (dashIndex < 1) return null;
+  const channel = agentId.slice(0, dashIndex);
+  const to = agentId.slice(dashIndex + 1);
+  return { channel, to };
+}
+
+export async function triggerAgent(
+  event: PancakeEvent,
+  options: TriggerOptions = {},
+): Promise<AgentResult> {
+  const { agentId } = options;
+
+  if (!agentId) {
+    logger.warn(`agentId not configured, skipping notification for ${event.deliveryId}`);
+    return { success: false, error: "agentId not configured" };
+  }
+
+  const delivery = parseDeliveryTarget(agentId);
+  if (!delivery) {
+    logger.error(`Cannot parse delivery target from agentId: ${agentId}`);
+    return { success: false, error: `invalid agentId format: ${agentId}` };
+  }
+
+  const message = buildPrompt(event);
+  const idempotencyKey = `pancake-${event.deliveryId}`;
+  const params = JSON.stringify({
+    to: delivery.to,
+    message,
+    channel: delivery.channel,
+    idempotencyKey,
+  });
+
+  logger.info(`Sending notification for ${event.deliveryId} via ${delivery.channel} to ${delivery.to}`);
 
   try {
-    await api.runtime.agent.runEmbeddedPiAgent({ sessionId, prompt });
-    logger.info(`Agent triggered successfully for ${event.deliveryId}`);
-    return { success: true, sessionId };
+    const cmd = `${OPENCLAW_BIN} gateway call send --json --params '${params.replace(/'/g, "'\\''")}'`;
+    logger.info(`Exec: ${OPENCLAW_BIN} gateway call send`);
+    const { stdout, stderr } = await execAsync(cmd, { timeout: 30_000 });
+    if (stderr) logger.warn(`Send stderr: ${stderr.slice(0, 200)}`);
+
+    let result: { messageId?: string; chatId?: string } | undefined;
+    try {
+      result = JSON.parse(stdout.trim());
+    } catch {
+      // stdout might have config warnings before JSON
+      const jsonMatch = stdout.match(/\{[^{}]*"messageId"[^{}]*\}/);
+      if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+    }
+
+    logger.info(`Notification sent for ${event.deliveryId} (messageId: ${result?.messageId})`);
+    return { success: true, sessionId: result?.chatId };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    logger.error(`Agent trigger failed for ${event.deliveryId}: ${error}`);
+    logger.error(`Notification failed for ${event.deliveryId}: ${error}`);
     return { success: false, error };
   }
 }

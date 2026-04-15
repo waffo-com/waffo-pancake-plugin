@@ -2,14 +2,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { verifyWebhookSignature } from "../processors/signature";
 import { checkIdempotency, markProcessed } from "../processors/idempotency";
 import { normalizeEvent } from "../processors/normalizer";
-import { triggerAgent } from "../agent/trigger";
+import { triggerAgent, type TriggerOptions } from "../agent/trigger";
 import { logger } from "../utils/logger";
 import type { PancakeWebhookPayload } from "../types";
 import type { JsonStore } from "../store/json-store";
 
 export function createWebhookHandler(
-  api: { runtime: { agent: { runEmbeddedPiAgent: (opts: { sessionId: string; prompt: string }) => Promise<unknown> } } },
   store: JsonStore,
+  triggerOptions: TriggerOptions = {},
 ) {
   return async function handleWebhook(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const chunks: Buffer[] = [];
@@ -25,6 +25,12 @@ export function createWebhookHandler(
       res.end("Bad Request");
       return;
     }
+
+    // Log headers for debugging signature header name
+    const relevantHeaders = Object.entries(req.headers)
+      .filter(([k]) => k.startsWith("x-") || k === "content-type" || k.includes("signature"))
+      .map(([k, v]) => `${k}: ${v}`);
+    logger.info(`Webhook headers: ${relevantHeaders.join(" | ")}`);
 
     const signatureHeader = req.headers["x-waffo-signature"] as string | undefined;
     if (!verifyWebhookSignature(body, signatureHeader, payload.mode)) {
@@ -58,7 +64,7 @@ export function createWebhookHandler(
     res.end("OK");
 
     try {
-      const result = await triggerAgent(api, event);
+      const result = await triggerAgent(event, triggerOptions);
       await store.updateEventStatus(event.deliveryId, result.success ? "agent_triggered" : "agent_failed", {
         agentResult: result,
       });
