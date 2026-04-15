@@ -77,11 +77,7 @@ async function main() {
   const selectedAgent = agents[index];
   console.log(`\n✅ 已选择: ${selectedAgent.name || selectedAgent.id}\n`);
 
-  // Step 4: Choose mode
-  const modeChoice = await ask("运行模式 — 1. test (测试) 2. prod (生产) [默认 1]: ");
-  const mode = modeChoice === "2" ? "prod" : "test";
-
-  // Step 5: Update openclaw.json
+  // Step 4: Update openclaw.json
   const config = JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
 
   if (!config.plugins) config.plugins = {};
@@ -94,7 +90,6 @@ async function main() {
   config.plugins.entries.pancake = {
     enabled: true,
     config: {
-      mode,
       agentId: selectedAgent.id,
     },
   };
