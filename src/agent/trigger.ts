@@ -15,10 +15,11 @@ const OPENCLAW_BIN = [
 
 export interface TriggerOptions {
   agentId?: string;
+  notifyTarget?: { channel: string; to: string };
 }
 
 /**
- * Parse agentId to extract channel and delivery target.
+ * Parse agentId to extract channel and delivery target (legacy fallback).
  * e.g. "feishu-ou_55a5fed66adc..." → { channel: "feishu", to: "ou_55a5fed66adc..." }
  */
 function parseDeliveryTarget(agentId: string): { channel: string; to: string } | null {
@@ -26,6 +27,7 @@ function parseDeliveryTarget(agentId: string): { channel: string; to: string } |
   if (dashIndex < 1) return null;
   const channel = agentId.slice(0, dashIndex);
   const to = agentId.slice(dashIndex + 1);
+  if (!channel || !to) return null;
   return { channel, to };
 }
 
@@ -33,17 +35,13 @@ export async function triggerAgent(
   event: PancakeEvent,
   options: TriggerOptions = {},
 ): Promise<AgentResult> {
-  const { agentId } = options;
+  const { agentId, notifyTarget } = options;
 
-  if (!agentId) {
-    logger.warn(`agentId not configured, skipping notification for ${event.deliveryId}`);
-    return { success: false, error: "agentId not configured" };
-  }
-
-  const delivery = parseDeliveryTarget(agentId);
+  // Resolve delivery target: prefer explicit notifyTarget, fall back to parsing agentId
+  const delivery = notifyTarget ?? (agentId ? parseDeliveryTarget(agentId) : null);
   if (!delivery) {
-    logger.error(`Cannot parse delivery target from agentId: ${agentId}`);
-    return { success: false, error: `invalid agentId format: ${agentId}` };
+    logger.error(`No delivery target configured (set notifyTarget or use agentId format "{channel}-{to}")`);
+    return { success: false, error: "no delivery target configured" };
   }
 
   const message = buildPrompt(event);

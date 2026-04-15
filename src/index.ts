@@ -60,7 +60,10 @@ export default {
     const store = createJsonStore(STATE_FILE);
 
     // Notification delivery via gateway send RPC
-    const triggerOptions = { agentId: config.agentId };
+    const triggerOptions = {
+      agentId: config.agentId,
+      notifyTarget: config.notifyTarget,
+    };
 
     // HTTP Route
     const handleWebhook = createWebhookHandler(store, triggerOptions);

@@ -24,13 +24,12 @@ function makeEvent(overrides: Partial<PancakeEvent> = {}): PancakeEvent {
 }
 
 describe("buildPrompt", () => {
-  it("includes event label, amount, product, and masked email", () => {
+  it("includes event label, amount, product, and email", () => {
     const prompt = buildPrompt(makeEvent());
     expect(prompt).toContain("订单完成");
     expect(prompt).toContain("Notion Template Pro");
     expect(prompt).toContain("29.00 USD");
-    expect(prompt).toContain("ali***@example.com");
-    expect(prompt).not.toContain("alice@example.com");
+    expect(prompt).toContain("alice@example.com");
   });
 
   it("prefixes [TEST] for test mode events", () => {
@@ -57,11 +56,10 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("订阅欠费");
   });
 
-  it("masks short emails correctly", () => {
+  it("includes short emails as-is", () => {
     const prompt = buildPrompt(makeEvent({
       summary: { ...makeEvent().summary, buyerEmail: "ab@test.com" },
     }));
-    expect(prompt).toContain("a***@test.com");
-    expect(prompt).not.toContain("ab@test.com");
+    expect(prompt).toContain("ab@test.com");
   });
 });
