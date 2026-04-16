@@ -64,6 +64,12 @@ if (process.argv.includes("--stop")) {
   process.exit(0);
 }
 
+// Parse CLI args: --platform, --chat-id for non-interactive mode
+function getArg(flag) {
+  const idx = process.argv.indexOf(flag);
+  return idx > 0 && idx < process.argv.length - 1 ? process.argv[idx + 1] : null;
+}
+
 async function main() {
   console.log("\n🥞 Pancake × Hermes — 安装向导\n");
 
@@ -99,30 +105,40 @@ async function main() {
   // 3. Enable webhook platform in config.yaml
   ensureWebhookPlatform();
 
-  // 4. Let user choose delivery platform
-  console.log("📬 选择通知投递渠道：\n");
-  SUPPORTED_PLATFORMS.forEach((p, i) => {
-    console.log(`  ${i + 1}. ${p}`);
-  });
-
-  const platformChoice = await ask(`\n请输入序号 (1-${SUPPORTED_PLATFORMS.length}): `);
-  const pIndex = parseInt(platformChoice, 10) - 1;
-  if (isNaN(pIndex) || pIndex < 0 || pIndex >= SUPPORTED_PLATFORMS.length) {
-    console.log("❌ 无效选择");
+  // 4. Choose platform (CLI arg or prompt)
+  let platform = getArg("--platform");
+  if (!platform) {
+    console.log("📬 选择通知投递渠道：\n");
+    SUPPORTED_PLATFORMS.forEach((p, i) => {
+      console.log(`  ${i + 1}. ${p}`);
+    });
+    const platformChoice = await ask(`\n请输入序号 (1-${SUPPORTED_PLATFORMS.length}): `);
+    const pIndex = parseInt(platformChoice, 10) - 1;
+    if (isNaN(pIndex) || pIndex < 0 || pIndex >= SUPPORTED_PLATFORMS.length) {
+      console.log("❌ 无效选择");
+      process.exit(1);
+    }
+    platform = SUPPORTED_PLATFORMS[pIndex];
+  }
+  if (!SUPPORTED_PLATFORMS.includes(platform)) {
+    console.log(`❌ 不支持的平台: ${platform}`);
+    console.log(`   支持: ${SUPPORTED_PLATFORMS.join(", ")}`);
     process.exit(1);
   }
-  const platform = SUPPORTED_PLATFORMS[pIndex];
   console.log(`\n✅ 已选择: ${platform}\n`);
 
-  // 5. Ask for chat_id
-  const chatIdHint = platform === "feishu"
-    ? "(飞书: oc_xxx 群聊 ID 或用户 open_id)"
-    : platform === "telegram"
-    ? "(Telegram: 数字 chat_id)"
-    : platform === "slack"
-    ? "(Slack: C0xxxxx channel ID)"
-    : "";
-  const chatId = (await ask(`请输入目标 chat_id ${chatIdHint}: `)).trim();
+  // 5. Get chat_id (CLI arg or prompt)
+  let chatId = getArg("--chat-id");
+  if (!chatId) {
+    const chatIdHint = platform === "feishu"
+      ? "(飞书: oc_xxx 群聊 ID 或用户 open_id)"
+      : platform === "telegram"
+      ? "(Telegram: 数字 chat_id)"
+      : platform === "slack"
+      ? "(Slack: C0xxxxx channel ID)"
+      : "";
+    chatId = (await ask(`请输入目标 chat_id ${chatIdHint}: `)).trim();
+  }
   if (!chatId) {
     console.log("❌ chat_id 不能为空");
     process.exit(1);

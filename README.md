@@ -119,69 +119,114 @@ Pancake 支付通知
 | `refund.succeeded` | 退款成功 |
 | `refund.failed` | 退款失败 |
 
-## Hermes Agent 兼容
+## Hermes Agent 安装
 
-Pancake Webhook 同样支持 [Hermes Agent](https://github.com/NousResearch/hermes-agent)。Hermes 内置 webhook 适配器，无需安装额外插件。
+Pancake Webhook 同样支持 [Hermes Agent](https://github.com/NousResearch/hermes-agent)（需要 2026-04-10 之后的版本）。
 
-### 配置方式
+### 一键安装（推荐）
 
-在 Hermes 的 `config.yaml` 中添加：
+```bash
+npx -p @waffo-pancake/openclaw-plugin pancake-hermes-setup
+```
+
+向导自动完成：
+1. 检查 Hermes 版本（旧版自动升级）
+2. 启用 webhook platform
+3. 选择投递渠道（飞书/Telegram/Slack/Discord 等 12 个平台）+ 填写 chat_id
+4. 订阅 pancake 路由
+5. 重启 Hermes gateway
+6. **后台启动 Cloudflare Tunnel（自动安装 cloudflared）**
+7. **自动注册 Waffo Relay**
+8. 输出永久 Webhook URL
+
+也支持 CLI 参数跳过交互：
+```bash
+npx -p @waffo-pancake/openclaw-plugin pancake-hermes-setup --platform feishu --chat-id oc_xxxxxxxx
+```
+
+辅助命令：
+```bash
+pancake-hermes-setup --url    # 查看永久 URL
+pancake-hermes-setup --stop   # 停止后台 tunnel
+```
+
+### 手动安装
+
+<details>
+<summary>展开手动安装步骤</summary>
+
+**1. 启用 webhook platform** — 编辑 `~/.hermes/config.yaml`，末尾添加：
 
 ```yaml
 platforms:
   webhook:
     enabled: true
     extra:
+      host: "0.0.0.0"
       port: 8644
-      routes:
-        pancake:
-          secret: "INSECURE_NO_AUTH"
-          events: []
-          prompt: |
-            Pancake 支付通知
-            📦 事件: {eventType}
-            商品: {data.productName}
-            金额: {data.amount} {data.currency}
-            买家: {data.buyerEmail}
-            时间: {timestamp}
-            事件ID: {eventId}
-            模式: {mode}
-          deliver: "telegram"
-          deliver_extra:
-            chat_id: "你的chat_id"
+      secret: "INSECURE_NO_AUTH"
 ```
 
-支持的 `deliver` 目标：`telegram`、`discord`、`slack`、`feishu`、`dingtalk`、`weixin`、`wecom`、`matrix`、`email`、`sms` 等 18+ 渠道。
+**2. 订阅 Pancake 路由：**
 
-### 配置 Webhook URL
-
-**方式一：Hermes 有公网地址**
-
-直接在 Pancake Dashboard 填写：
-```
-http://your-server:8644/webhooks/pancake
-```
-
-**方式二：Hermes 在本地运行**
-
-使用 Waffo Relay 获取永久 URL：
 ```bash
-# 注册 Hermes 的 webhook 端点到 Relay
+hermes webhook subscribe pancake \
+  --prompt 'Pancake 支付通知
+📦 事件: {eventType}
+商品: {data.productName}
+金额: {data.amount} {data.currency}
+买家: {data.buyerEmail}
+时间: {timestamp}
+事件ID: {eventId}' \
+  --deliver feishu \
+  --deliver-chat-id <YOUR_CHAT_ID> \
+  --secret INSECURE_NO_AUTH
+```
+
+`--deliver` 支持：`feishu`、`telegram`、`slack`、`discord`、`wecom`、`dingtalk`、`whatsapp`、`matrix`、`mattermost`、`signal`、`email`、`sms`。
+
+**3. 重启 gateway：**
+
+```bash
+hermes gateway restart
+```
+
+**4. 启动 Tunnel + 注册 Relay：**
+
+```bash
+cloudflared tunnel --url http://localhost:8644
+# 拿到 tunnel URL 后注册到 Relay
 curl -X POST https://waffo-pancake-webhook-relay.vercel.app/register \
   -H "Content-Type: application/json" \
-  -d '{"pluginId":"your-uuid","targetUrl":"http://localhost:8644/webhooks/pancake"}'
+  -d '{"pluginId":"<UUID>","targetUrl":"https://xxx.trycloudflare.com/webhooks/pancake"}'
 ```
 
-然后在 Pancake Dashboard 填写返回的 `webhookUrl`。
+</details>
+
+### Hermes 通知效果
+
+Hermes 会让 Agent 智能加工后投递：
+
+```
+📦 order.completed
+Auto Setup Test · $49.00 USD
+买家：auto@example.com
+时间：04-15 02:30 CST
+事件 ID：PAY_xxx
+```
 
 ## 工作原理
 
 ```
-Pancake → Waffo Relay (Vercel) → Agent (OpenClaw / Hermes) → IM 通知
+Pancake → Waffo Relay (Vercel) → Cloudflare Tunnel → Agent → IM 通知
 ```
 
-- **OpenClaw**：插件自动创建 Tunnel + 注册 Relay，零配置
-- **Hermes**：使用内置 webhook 适配器，配置 `config.yaml` 即可
+| 环节 | OpenClaw | Hermes |
+|------|---------|--------|
+| Agent | OpenClaw 插件接收 + gateway send RPC 投递 | 内置 webhook adapter + Agent 智能加工 + 跨平台投递 |
+| Tunnel | 插件内置自动启动 | 向导后台启动 |
+| Relay | 插件内置自动注册 | 向导自动注册 |
+| 安装方式 | `pancake-setup` | `pancake-hermes-setup` |
 
 ## Agent Tools (OpenClaw)
 
