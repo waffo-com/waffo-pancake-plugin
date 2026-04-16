@@ -1,6 +1,6 @@
 {
   "name": "@waffo-pancake/openclaw-plugin",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "OpenClaw plugin for Pancake payment webhook events",
   "type": "module",
   "main": "dist/index.js",
@@ -37,8 +37,10 @@
   "author": "Waffo Team",
   "license": "MIT",
   "dependencies": {
-    "cloudflared": "^0.6.0",
     "zod": "^3.23.0"
+  },
+  "optionalDependencies": {
+    "cloudflared": "^0.6.0"
   },
   "peerDependencies": {
     "openclaw": ">=2026.0.0"
