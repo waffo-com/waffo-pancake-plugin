@@ -177,13 +177,31 @@ async function main() {
     process.exit(1);
   }
 
-  // 7. Restart Hermes gateway
+  // 7. Restart Hermes gateway (try multiple methods)
   console.log("🔄 重启 Hermes gateway...");
-  try {
-    execSync(`"${HERMES_BIN}" gateway restart`, { stdio: "pipe", timeout: 30000 });
-    console.log("✅ Gateway 已重启\n");
-  } catch {
-    console.log("⚠️  自动重启失败，请手动运行：hermes gateway restart\n");
+  let gatewayRestarted = false;
+  for (const cmd of [
+    `"${HERMES_BIN}" gateway restart`,
+    `"${HERMES_BIN}" gateway stop; sleep 2; "${HERMES_BIN}" gateway start`,
+  ]) {
+    try {
+      execSync(cmd, { stdio: "pipe", timeout: 30000, shell: true });
+      gatewayRestarted = true;
+      console.log("✅ Gateway 已重启\n");
+      break;
+    } catch {
+      // try next method
+    }
+  }
+  if (!gatewayRestarted) {
+    console.log("\n" + "⚠️".repeat(20));
+    console.log("❗ Gateway 自动重启失败！后续步骤不会生效。");
+    console.log("❗ 请手动运行以下命令后重新执行本向导：");
+    console.log("");
+    console.log("   hermes gateway stop && hermes gateway start");
+    console.log("⚠️".repeat(20) + "\n");
+    rl.close();
+    process.exit(1);
   }
 
   // 8. Generate pluginId and save state
