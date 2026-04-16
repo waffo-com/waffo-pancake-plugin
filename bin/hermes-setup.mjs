@@ -177,7 +177,34 @@ async function main() {
     process.exit(1);
   }
 
-  // 7. Restart Hermes gateway (try multiple methods)
+  // 7. Generate pluginId and save state
+  const state = loadState();
+  if (!state.pluginId) state.pluginId = randomUUID();
+  state.platform = platform;
+  state.chatId = chatId;
+  saveState(state);
+
+  // 8. Auto-start Cloudflare Tunnel + register with Relay
+  const tunnelUrl = await startTunnel();
+  if (!tunnelUrl) {
+    console.log("❌ Tunnel 启动失败，请手动运行：cloudflared tunnel --url http://localhost:8644");
+    process.exit(1);
+  }
+
+  console.log(`✅ Tunnel 已启动: ${tunnelUrl}\n`);
+
+  // 9. Register with Waffo Relay
+  console.log("🔗 注册到 Waffo Relay...");
+  const registered = await registerWithRelay(state.pluginId, `${tunnelUrl}/webhooks/pancake`);
+  if (!registered) {
+    console.log("❌ Relay 注册失败");
+    process.exit(1);
+  }
+
+  const webhookUrl = `${RELAY_BASE}/webhook/${state.pluginId}`;
+  console.log("✅ Relay 已注册\n");
+
+  // 10. Restart Hermes gateway
   console.log("🔄 重启 Hermes gateway...");
   let gatewayRestarted = false;
   for (const cmd of [
@@ -193,53 +220,26 @@ async function main() {
       // try next method
     }
   }
-  if (!gatewayRestarted) {
-    console.log("\n" + "⚠️".repeat(20));
-    console.log("❗ Gateway 自动重启失败！后续步骤不会生效。");
-    console.log("❗ 请手动运行以下命令后重新执行本向导：");
-    console.log("");
-    console.log("   hermes gateway stop && hermes gateway start");
-    console.log("⚠️".repeat(20) + "\n");
-    rl.close();
-    process.exit(1);
-  }
-
-  // 8. Generate pluginId and save state
-  const state = loadState();
-  if (!state.pluginId) state.pluginId = randomUUID();
-  state.platform = platform;
-  state.chatId = chatId;
-  saveState(state);
-
-  // 9. Auto-start Cloudflare Tunnel + register with Relay
-  const tunnelUrl = await startTunnel();
-  if (!tunnelUrl) {
-    console.log("❌ Tunnel 启动失败，请手动运行：cloudflared tunnel --url http://localhost:8644");
-    process.exit(1);
-  }
-
-  console.log(`✅ Tunnel 已启动: ${tunnelUrl}\n`);
-
-  // 10. Register with Waffo Relay
-  console.log("🔗 注册到 Waffo Relay...");
-  const registered = await registerWithRelay(state.pluginId, `${tunnelUrl}/webhooks/pancake`);
-  if (!registered) {
-    console.log("❌ Relay 注册失败");
-    process.exit(1);
-  }
-
-  const webhookUrl = `${RELAY_BASE}/webhook/${state.pluginId}`;
-  console.log("✅ Relay 已注册\n");
 
   // 11. Done
   console.log("=".repeat(60));
   console.log("🎉 安装完成！\n");
-  console.log("📋 你的 Webhook URL（永久有效）:\n");
+  console.log("📋 你的 Webhook URL（永久有效，复制到 Pancake Dashboard）:\n");
   console.log(`   ${webhookUrl}\n`);
+  if (!gatewayRestarted) {
+    console.log("⚠️  Gateway 自动重启失败，请手动执行以下命令使配置生效：\n");
+    console.log("   hermes gateway stop && hermes gateway start\n");
+  }
   console.log("下一步：");
-  console.log("  1. 打开 Pancake Dashboard → Settings → Webhooks");
-  console.log("  2. 粘贴上面的 URL，勾选事件，保存\n");
-  console.log("Tunnel 已在后台运行（PID: " + state.tunnelPid + "）");
+  if (!gatewayRestarted) {
+    console.log("  1. 手动重启 gateway（上面的命令）");
+    console.log("  2. 打开 Pancake Dashboard → Settings → Webhooks");
+    console.log("  3. 粘贴上面的 URL，勾选事件，保存");
+  } else {
+    console.log("  1. 打开 Pancake Dashboard → Settings → Webhooks");
+    console.log("  2. 粘贴上面的 URL，勾选事件，保存");
+  }
+  console.log("");
   console.log("随时查看 URL：pancake-hermes-setup --url");
   console.log("停止 Tunnel：pancake-hermes-setup --stop");
   console.log("=".repeat(60) + "\n");
