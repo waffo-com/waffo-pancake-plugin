@@ -1,11 +1,11 @@
-# @waffo-pancake/openclaw-plugin
+# @waffo/openclaw-plugin
 
 Pancake 支付事件 OpenClaw 插件。接收 Pancake 平台的支付、订阅、退款事件，自动通过飞书/Telegram/Slack 等 IM 渠道通知商户。
 
 ## 安装 & 配置（一键）
 
 ```bash
-npx -p @waffo-pancake/openclaw-plugin pancake-setup
+npx -p @waffo/openclaw-plugin pancake-setup
 ```
 
 交互式向导会自动完成：
@@ -24,7 +24,7 @@ npx -p @waffo-pancake/openclaw-plugin pancake-setup
 **安装插件：**
 ```bash
 mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
-  && npm pack @waffo-pancake/openclaw-plugin \
+  && npm pack @waffo/openclaw-plugin \
   && tar xzf *.tgz --strip-components=1 && rm *.tgz \
   && npm install --omit=dev
 ```
@@ -46,7 +46,7 @@ mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
     "installs": {
       "pancake": {
         "source": "local",
-        "spec": "@waffo-pancake/openclaw-plugin",
+        "spec": "@waffo/openclaw-plugin",
         "installPath": "~/.openclaw/extensions/pancake",
         "version": "0.3.0"
       }
@@ -126,7 +126,7 @@ Pancake Webhook 同样支持 [Hermes Agent](https://github.com/NousResearch/herm
 ### 一键安装（推荐）
 
 ```bash
-npx -p @waffo-pancake/openclaw-plugin pancake-hermes-setup
+npx -p @waffo/openclaw-plugin pancake-hermes-setup
 ```
 
 向导自动完成：
@@ -141,7 +141,7 @@ npx -p @waffo-pancake/openclaw-plugin pancake-hermes-setup
 
 也支持 CLI 参数跳过交互：
 ```bash
-npx -p @waffo-pancake/openclaw-plugin pancake-hermes-setup --platform feishu --chat-id oc_xxxxxxxx
+npx -p @waffo/openclaw-plugin pancake-hermes-setup --platform feishu --chat-id oc_xxxxxxxx
 ```
 
 辅助命令：

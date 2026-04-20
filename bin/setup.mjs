@@ -45,7 +45,7 @@ async function main() {
 
   try {
     execSync(
-      `cd "${EXTENSIONS_DIR}" && npm pack @waffo-pancake/openclaw-plugin 2>/dev/null && tar xzf *.tgz --strip-components=1 && rm *.tgz && npm install --omit=dev 2>/dev/null`,
+      `cd "${EXTENSIONS_DIR}" && npm pack @waffo/openclaw-plugin 2>/dev/null && tar xzf *.tgz --strip-components=1 && rm *.tgz && npm install --omit=dev 2>/dev/null`,
       { stdio: "pipe" },
     );
     console.log("✅ 插件安装完成\n");
@@ -131,7 +131,7 @@ async function main() {
   if (!config.plugins.installs) config.plugins.installs = {};
   config.plugins.installs.pancake = {
     source: "npm",
-    spec: "@waffo-pancake/openclaw-plugin",
+    spec: "@waffo/openclaw-plugin",
     installPath: EXTENSIONS_DIR,
     version: VERSION,
   };
