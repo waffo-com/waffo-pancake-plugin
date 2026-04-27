@@ -20,7 +20,7 @@ if (process.argv.includes("--url")) {
   if (url) {
     console.log(url);
   } else {
-    console.log("Pancake 插件未安装或未运行过。请先运行 pancake-setup 安装。");
+    console.log("Pancake 插件未安装或未运行过。请先运行 openclaw-setup 安装。");
     process.exit(1);
   }
   process.exit(0);
@@ -45,7 +45,7 @@ async function main() {
 
   try {
     execSync(
-      `cd "${EXTENSIONS_DIR}" && npm pack @waffo/openclaw-plugin 2>/dev/null && tar xzf *.tgz --strip-components=1 && rm *.tgz && npm install --omit=dev 2>/dev/null`,
+      `cd "${EXTENSIONS_DIR}" && npm pack @waffo/pancake-plugin 2>/dev/null && tar xzf *.tgz --strip-components=1 && rm *.tgz && npm install --omit=dev 2>/dev/null`,
       { stdio: "pipe" },
     );
     console.log("✅ 插件安装完成\n");
@@ -131,7 +131,7 @@ async function main() {
   if (!config.plugins.installs) config.plugins.installs = {};
   config.plugins.installs.pancake = {
     source: "npm",
-    spec: "@waffo/openclaw-plugin",
+    spec: "@waffo/pancake-plugin",
     installPath: EXTENSIONS_DIR,
     version: VERSION,
   };
@@ -152,7 +152,7 @@ async function main() {
   console.log("  2. 打开 Pancake Dashboard → Settings → Webhooks");
   console.log("  3. 粘贴上面的 URL，勾选事件，保存");
   console.log("");
-  console.log("随时查看 URL：pancake-setup --url");
+  console.log("随时查看 URL：openclaw-setup --url");
   console.log("=".repeat(55) + "\n");
 
   rl.close();

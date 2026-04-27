@@ -40,7 +40,7 @@ if (process.argv.includes("--url")) {
   if (url) {
     console.log(url);
   } else {
-    console.log("No Pancake × Hermes configuration found. Run pancake-hermes-setup to finish setup.");
+    console.log("No Pancake × Hermes configuration found. Run hermes-setup to finish setup.");
     process.exit(1);
   }
   process.exit(0);
@@ -274,8 +274,8 @@ Emit only those ten lines. No preamble or trailer.`;
     console.log("  2. Paste the URL above, select events, save");
   }
   console.log("");
-  console.log("Show URL anytime:  pancake-hermes-setup --url");
-  console.log("Stop the tunnel:   pancake-hermes-setup --stop");
+  console.log("Show URL anytime:  hermes-setup --url");
+  console.log("Stop the tunnel:   hermes-setup --stop");
   console.log("=".repeat(60) + "\n");
 
   rl.close();
