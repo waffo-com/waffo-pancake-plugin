@@ -13,7 +13,7 @@ const HERMES_BIN = join(HERMES_DIR, "hermes-agent", "venv", "bin", "hermes");
 const HERMES_SRC = join(HERMES_DIR, "hermes-agent");
 const STATE_FILE = join(HERMES_DIR, "pancake-hermes-state.json");
 const TUNNEL_LOG = join(HERMES_DIR, "pancake-tunnel.log");
-const RELAY_BASE = "https://waffo-pancake-webhook-relay.vercel.app";
+const RELAY_BASE = "https://relay.waffo.ai";
 
 /** Find cloudflared binary (tries common install paths + cached npm binary) */
 function findCloudflaredBin() {

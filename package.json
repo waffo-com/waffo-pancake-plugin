@@ -1,6 +1,6 @@
 {
   "name": "@waffo/pancake-plugin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Pancake payment webhook plugin (OpenClaw / Hermes delivery targets)",
   "type": "module",
   "main": "dist/index.js",

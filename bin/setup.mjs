@@ -11,7 +11,7 @@ const OPENCLAW_DIR = join(homedir(), ".openclaw");
 const CONFIG_FILE = join(OPENCLAW_DIR, "openclaw.json");
 const STATE_FILE = join(OPENCLAW_DIR, "pancake-state.json");
 const EXTENSIONS_DIR = join(OPENCLAW_DIR, "extensions", "pancake");
-const RELAY_BASE = "https://waffo-pancake-webhook-relay.vercel.app";
+const RELAY_BASE = "https://relay.waffo.ai";
 const VERSION = "0.3.0";
 
 // --url flag: quick webhook URL lookup

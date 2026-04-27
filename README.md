@@ -75,7 +75,7 @@ mkdir -p ~/.openclaw/extensions/pancake && cd ~/.openclaw/extensions/pancake \
 ```
 [pancake] ============================================================
 [pancake] Pancake plugin ready!
-[pancake] Webhook URL: https://waffo-pancake-webhook-relay.vercel.app/webhook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+[pancake] Webhook URL: https://relay.waffo.ai/webhook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 [pancake] This URL is permanent — configure it once in Pancake Dashboard.
 [pancake] ============================================================
 ```
@@ -196,7 +196,7 @@ hermes gateway restart
 ```bash
 cloudflared tunnel --url http://localhost:8644
 # 拿到 tunnel URL 后注册到 Relay
-curl -X POST https://waffo-pancake-webhook-relay.vercel.app/register \
+curl -X POST https://relay.waffo.ai/register \
   -H "Content-Type: application/json" \
   -d '{"pluginId":"<UUID>","targetUrl":"https://xxx.trycloudflare.com/webhooks/pancake"}'
 ```
