@@ -39,14 +39,14 @@
     "zod": "^3.23.0"
   },
   "optionalDependencies": {
-    "cloudflared": "^0.6.0"
+    "cloudflared": "^0.7.1"
   },
   "peerDependencies": {
     "openclaw": ">=2026.0.0"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.1.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^3.1.0"
   }
 }
