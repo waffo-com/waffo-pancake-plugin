@@ -146,47 +146,7 @@ async function main() {
 
   // 6. Subscribe webhook route
   console.log("\n📝 Subscribing the pancake webhook route…");
-  const prompt = `Pancake payment event for an indie maker.
-
-Event: {eventType}
-Product: {data.productName}
-Amount: {data.amount} {data.currency}
-Buyer: {data.buyerEmail}
-Time: {timestamp}
-Event ID: {eventId}
-
-Respond in Feishu-friendly Markdown. Match the product's language (Chinese product name → Chinese labels; English → English labels).
-
-Exact 10-line structure:
-
-Line 1: "# " + event emoji(s) + " " + punchy event title (≤ 10 chars)
-  · order.completed → "新订单入账" / "New sale"
-  · subscription.activated → "新订阅到手" / "New subscription"
-  · subscription.payment_succeeded → "续费成功" / "Renewed"
-  · subscription.canceling / canceled → "有人要走了" / "Cancellation"
-  · refund.succeeded → "退款完成" / "Refunded"
-  · refund.failed / past_due → "扣款异常" / "Payment issue"
-Line 2: (blank)
-Line 3: "商品名称：" (or "Product: ") + **bold product name**
-Line 4: "金额：" (or "Amount: ") + amount + " " + currency
-Line 5: "用户邮箱：" (or "Buyer: ") + buyer email
-Line 6: (blank)
-Line 7: one fun, product-aware line. AVOID generic cheers ("加油", "值得", "太棒了", "nice work", "keep it up"). PREFER in priority order:
-  1. BEST — infer what the product does and weave that into the line:
-     · "人生管理模板" → "又一个人选择用你的模板管理人生"
-     · "AI 对话助手" → "又有人让你的 AI 替他加班"
-     · "code editor" → "someone just trusted your editor to ship their side project"
-  2. If product use is unclear, fall back to tangible life scenes — "这单够你今晚点个烧烤了", "又凑够一个月云服务器钱"
-  3. Playful observations — "又一个陌生人为你的代码付费", "someone just voted with their wallet"
-  4. Gentle humor on churn / refund — "天要下雨，用户要取消", "退就退吧，钱来过见过"
-  Match the event mood: celebratory for sales, affectionate for renewals, composed for cancellations, matter-of-fact for refunds.
-Line 8: ---
-Line 9: "订单号：" (or "Order ID: ") + \`event_id\` in inline backticks
-Line 10: "时间：" (or "Time: ") + time
-
-Event emoji: 💰🎉 order.completed · ✨ subscription.activated · 🔁 subscription.payment_succeeded · 👋 subscription.canceling/canceled · 💸 refund.succeeded · ⚠️ refund.failed/past_due
-
-Emit only those ten lines. No preamble or trailer.`;
+  const prompt = buildHermesPrompt(platform);
 
   try {
     // Remove existing subscription if any
@@ -416,6 +376,88 @@ function getWebhookUrl() {
   if (!state.pluginId) return null;
   return `${RELAY_BASE}/webhook/${state.pluginId}`;
 }
+
+/**
+ * Build the per-event notification prompt for Hermes's LLM-driven webhook delivery.
+ * Mirrors src/agent/prompt-builder.ts (OpenClaw path) so both modes emit the same shape.
+ *
+ * Feishu / Lark → Chinese labels + Beijing time (UTC+8, no suffix).
+ * Everything else → English labels + UTC time (with "UTC" suffix).
+ */
+function buildHermesPrompt(platform) {
+  const isFeishu = platform === "feishu" || platform === "lark";
+  const lang = isFeishu ? "Chinese" : "English";
+  const sep = isFeishu ? "：" : ": ";
+  const tax = isFeishu ? "（含税 {taxAmount}）" : " (incl. tax {taxAmount})";
+  const ct = isFeishu ? "个人 / 企业" : "Individual / Business";
+  const tz = isFeishu
+    ? "Beijing time (UTC+8), format YYYY-MM-DD HH:mm, no timezone suffix"
+    : "UTC, format YYYY-MM-DD HH:mm UTC";
+  const titlesAndFields = isFeishu ? TITLE_FIELD_TABLE_ZH : TITLE_FIELD_TABLE_EN;
+  const buttonLabels = isFeishu
+    ? '"查看订单" for order/subscription events, "查看退款" for refund events'
+    : '"View Order" for order/subscription events, "View Refund" for refund events';
+  const dashUrl = "https://pancake.waffo.ai/merchant/dashboard/{storeId}/{resource}";
+
+  return `Pancake payment webhook → ${lang} notification text.
+
+Webhook payload fields available:
+- eventType, timestamp (ISO 8601 UTC), storeName, storeId, mode, eventId
+- data.{productName, amount, currency, taxAmount, buyerEmail, orderId,
+        interval, currentPeriodEnd, refundAmount, refundReason, failureReason,
+        cardLast4, effectiveEndDate, canceledAt}
+- data.billingDetail.{country, isBusiness}
+
+Output ONLY the formatted notification text. No preamble, no JSON, no code fences.
+
+Layout (use real newlines):
+
+  {testPrefix}{title}
+
+  {label1}${sep}{value1}
+  {label2}${sep}{value2}
+  ... (one per field for this eventType, in the order listed below)
+
+  {buttonLabel}${sep}${dashUrl}
+
+  waffo.ai · {storeName} · {timestamp}
+
+Rules:
+1. {testPrefix}: "[TEST] " when mode=test, else "".
+2. {title} and field set per eventType:
+${titlesAndFields}
+3. {buttonLabel}: ${buttonLabels}.
+4. {resource}: "payments" for order/subscription events, "refunds" for refund events.
+5. Amount format: "{currency} {amount}". If taxAmount is present and not "0"/"0.00", append "${tax}".
+6. Customer Type: ${ct} based on data.billingDetail.isBusiness boolean.
+7. Missing / null / empty optional fields render as "—" (em dash).
+8. {timestamp} formatting: ${tz}.
+9. {storeName}: use the value if present; otherwise "—".
+
+Output the message text only.`;
+}
+
+const TITLE_FIELD_TABLE_ZH = `   - order.completed → "✅ 支付成功" → 商品 / 金额 / 买家邮箱 / 国家 / 买家类型 / 订单号
+   - subscription.activated → "🎉 订阅激活" → 商品 / 金额 / 买家邮箱 / 国家 / 买家类型 / 订阅周期 / 下次扣款 / 订单号
+   - subscription.payment_succeeded → "💰 续费成功" → 商品 / 续费金额 / 买家邮箱 / 国家 / 买家类型 / 订阅周期 / 下次扣款 / 订单号
+   - subscription.canceling → "⚠️ 取消订阅" → 商品 / 金额 / 买家邮箱 / 国家 / 买家类型 / 订单号 / 实际终止日
+   - subscription.uncanceled → "↩️ 撤销取消" → 商品 / 金额 / 买家邮箱 / 国家 / 买家类型 / 订阅周期 / 下次扣款 / 订单号
+   - subscription.updated → "🔄 订阅变更" → 新商品 / 新金额 / 买家邮箱 / 国家 / 买家类型 / 订阅周期 / 下次扣款 / 订单号
+   - subscription.canceled → "🚫 订阅终止" → 商品 / 金额 / 买家邮箱 / 国家 / 买家类型 / 订单号 / 终止时间
+   - subscription.past_due → "❗ 续费失败" → 商品 / 续费金额 / 买家邮箱 / 国家 / 买家类型 / 卡尾号 / 到期日 / 订单号 / 失败原因
+   - refund.succeeded → "💸 退款成功" → 商品 / 退款金额 / 买家邮箱 / 国家 / 买家类型 / 订单号 / 退款原因
+   - refund.failed → "❗ 退款失败" → 商品 / 退款金额 / 买家邮箱 / 国家 / 买家类型 / 订单号 / 失败原因`;
+
+const TITLE_FIELD_TABLE_EN = `   - order.completed → "✅ Payment Succeeded" → Product / Amount / Customer Email / Country / Customer Type / Order ID
+   - subscription.activated → "🎉 Subscription Activated" → Product / Amount / Customer Email / Country / Customer Type / Billing Period / Next Charge / Order ID
+   - subscription.payment_succeeded → "💰 Renewal Succeeded" → Product / Renewal Amount / Customer Email / Country / Customer Type / Billing Period / Next Charge / Order ID
+   - subscription.canceling → "⚠️ Unsubscribing" → Product / Amount / Customer Email / Country / Customer Type / Order ID / Final Termination Date
+   - subscription.uncanceled → "↩️ Cancellation Withdrawn" → Product / Amount / Customer Email / Country / Customer Type / Billing Period / Next Charge / Order ID
+   - subscription.updated → "🔄 Subscription Updated" → New Product / New Amount / Customer Email / Country / Customer Type / Billing Period / Next Charge / Order ID
+   - subscription.canceled → "🚫 Subscription Canceled" → Product / Amount / Customer Email / Country / Customer Type / Order ID / Canceled At
+   - subscription.past_due → "❗ Renewal Failed" → Product / Renewal Amount / Customer Email / Country / Customer Type / Card Last 4 / Period Ends / Order ID / Failure Reason
+   - refund.succeeded → "💸 Refund Succeeded" → Product / Refund Amount / Customer Email / Country / Customer Type / Order ID / Refund Reason
+   - refund.failed → "❗ Refund Failed" → Product / Refund Amount / Customer Email / Country / Customer Type / Order ID / Failure Reason`;
 
 main().catch((err) => {
   console.error("Setup failed:", err.message);

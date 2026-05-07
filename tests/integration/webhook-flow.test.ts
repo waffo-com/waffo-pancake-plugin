@@ -56,7 +56,7 @@ describe("Webhook flow integration", () => {
     const prompt = buildPrompt(event);
     expect(prompt).toContain("[TEST]");
     expect(prompt).toContain("Design Kit");
-    expect(prompt).toContain("49.00 USD");
+    expect(prompt).toContain("USD 49.00");
 
     const state = await store.loadState();
     expect(state.events).toHaveLength(1);

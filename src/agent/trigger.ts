@@ -44,7 +44,7 @@ export async function triggerAgent(
     return { success: false, error: "no delivery target configured" };
   }
 
-  const message = buildPrompt(event);
+  const message = buildPrompt(event, { channel: delivery.channel });
   const idempotencyKey = `pancake-${event.deliveryId}`;
   const params = JSON.stringify({
     to: delivery.to,

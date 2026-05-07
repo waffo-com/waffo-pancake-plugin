@@ -19,8 +19,15 @@ export interface PancakeWebhookPayload {
   eventType: PancakeWebhookEventType;
   eventId: string;
   storeId: string;
+  storeName?: string;
   mode: "test" | "prod";
   data: PancakeWebhookData;
+}
+
+export interface PancakeBillingDetail {
+  country?: string;
+  isBusiness?: boolean;
+  [key: string]: unknown;
 }
 
 export interface PancakeWebhookData {
@@ -39,6 +46,10 @@ export interface PancakeWebhookData {
   refundAmount?: string;
   refundReason?: string;
   failureReason?: string;
+  cardLast4?: string;
+  effectiveEndDate?: string;
+  canceledAt?: string;
+  billingDetail?: PancakeBillingDetail;
   [key: string]: unknown;
 }
 
@@ -52,6 +63,7 @@ export interface PancakeEvent {
   category: StandardEventCategory;
   status: StandardEventStatus;
   storeId: string;
+  storeName?: string;
   mode: "test" | "prod";
   summary: EventSummary;
   rawData: PancakeWebhookData;

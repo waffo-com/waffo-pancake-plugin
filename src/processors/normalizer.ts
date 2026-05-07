@@ -29,6 +29,7 @@ export function normalizeEvent(payload: PancakeWebhookPayload): PancakeEvent {
     category: mapped.category,
     status: mapped.status,
     storeId: payload.storeId,
+    storeName: payload.storeName,
     mode: payload.mode,
     summary: {
       productName: (data.productName as string | undefined) ?? "Unknown",
