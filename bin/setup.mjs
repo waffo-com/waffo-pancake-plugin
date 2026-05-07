@@ -12,7 +12,7 @@ const CONFIG_FILE = join(OPENCLAW_DIR, "openclaw.json");
 const STATE_FILE = join(OPENCLAW_DIR, "pancake-state.json");
 const EXTENSIONS_DIR = join(OPENCLAW_DIR, "extensions", "pancake");
 const RELAY_BASE = "https://relay.waffo.ai";
-const VERSION = "0.3.0";
+const VERSION = "0.4.3";
 
 // --url flag: quick webhook URL lookup
 if (process.argv.includes("--url")) {
@@ -20,7 +20,7 @@ if (process.argv.includes("--url")) {
   if (url) {
     console.log(url);
   } else {
-    console.log("Pancake 插件未安装或未运行过。请先运行 openclaw-setup 安装。");
+    console.log("No Pancake × OpenClaw configuration found. Run openclaw-setup to finish setup.");
     process.exit(1);
   }
   process.exit(0);
@@ -30,17 +30,17 @@ const rl = createInterface({ input: process.stdin, output: process.stdout });
 const ask = (q) => new Promise((resolve) => rl.question(q, resolve));
 
 async function main() {
-  console.log("\n🥞 Pancake OpenClaw Plugin — 安装向导\n");
+  console.log("\n🥞 Pancake × OpenClaw · Setup\n");
 
   // Step 1: Check OpenClaw
   if (!existsSync(CONFIG_FILE)) {
-    console.log("❌ 未找到 OpenClaw 配置文件 (~/.openclaw/openclaw.json)");
-    console.log("   请先安装并运行 OpenClaw: https://openclaw.ai");
+    console.log("❌ OpenClaw config not found (~/.openclaw/openclaw.json)");
+    console.log("   Install and start OpenClaw first: https://openclaw.ai");
     process.exit(1);
   }
 
   // Step 2: Install plugin files
-  console.log("📦 安装插件...");
+  console.log("📦 Installing plugin…");
   mkdirSync(EXTENSIONS_DIR, { recursive: true });
 
   try {
@@ -48,66 +48,66 @@ async function main() {
       `cd "${EXTENSIONS_DIR}" && npm pack @waffo/pancake-plugin 2>/dev/null && tar xzf *.tgz --strip-components=1 && rm *.tgz && npm install --omit=dev 2>/dev/null`,
       { stdio: "pipe" },
     );
-    console.log("✅ 插件安装完成\n");
+    console.log("✅ Plugin installed.\n");
   } catch {
-    console.log("❌ 安装失败，请检查网络连接后重试");
+    console.log("❌ Install failed. Check your network and try again.");
     process.exit(1);
   }
 
   // Step 3: Scan available agents
   const agents = scanAgents();
   if (agents.length === 0) {
-    console.log("⚠️  未找到任何 Agent，请先在 OpenClaw 中创建并绑定 IM 渠道");
+    console.log("⚠️  No agents found. Create one in OpenClaw and connect it to an IM channel first.");
     process.exit(1);
   }
 
-  console.log("🤖 选择通知目标 Agent:\n");
+  console.log("🤖 Choose the agent to receive notifications:\n");
   agents.forEach((a, i) => {
     const channel = a.channel ? `[${a.channel}]` : "";
     console.log(`  ${i + 1}. ${a.name || a.id} ${channel}`);
   });
 
-  const choice = await ask(`\n请输入序号 (1-${agents.length}): `);
+  const choice = await ask(`\nEnter a number (1–${agents.length}): `);
   const index = parseInt(choice, 10) - 1;
   if (isNaN(index) || index < 0 || index >= agents.length) {
-    console.log("❌ 无效选择");
+    console.log("❌ Invalid selection.");
     process.exit(1);
   }
 
   const selectedAgent = agents[index];
-  console.log(`\n✅ 已选择: ${selectedAgent.name || selectedAgent.id}\n`);
+  console.log(`\n✅ Selected: ${selectedAgent.name || selectedAgent.id}\n`);
 
   // Step 4: Choose target session/chat
   const sessions = scanSessions(selectedAgent.id);
   let notifyTarget = null;
 
   if (sessions.length === 0) {
-    console.log("⚠️  该 Agent 暂无会话记录");
+    console.log("⚠️  This agent has no session history yet.");
     const fallback = parseAgentIdForTarget(selectedAgent.id);
     if (fallback) {
-      console.log(`   使用 agentId 解析的默认目标: ${fallback.channel}/${fallback.to}\n`);
+      console.log(`   Falling back to delivery target parsed from agentId: ${fallback.channel}/${fallback.to}\n`);
       notifyTarget = fallback;
     } else {
-      console.log("❌ 无法确定通知目标。请先让 Agent 接收至少一条消息，然后重新运行 setup。");
+      console.log("❌ Could not determine a notification target. Send the agent at least one message, then re-run setup.");
       process.exit(1);
     }
   } else if (sessions.length === 1) {
     notifyTarget = sessions[0].target;
-    console.log(`✅ 使用唯一会话: ${sessions[0].label}\n`);
+    console.log(`✅ Using the only session: ${sessions[0].label}\n`);
   } else {
-    console.log("💬 选择通知目标会话:\n");
+    console.log("💬 Choose a session to receive notifications:\n");
     sessions.forEach((s, i) => {
       console.log(`  ${i + 1}. ${s.label}`);
     });
 
-    const sessionChoice = await ask(`\n请输入序号 (1-${sessions.length}): `);
+    const sessionChoice = await ask(`\nEnter a number (1–${sessions.length}): `);
     const sIndex = parseInt(sessionChoice, 10) - 1;
     if (isNaN(sIndex) || sIndex < 0 || sIndex >= sessions.length) {
-      console.log("❌ 无效选择");
+      console.log("❌ Invalid selection.");
       process.exit(1);
     }
     notifyTarget = sessions[sIndex].target;
-    console.log(`\n✅ 已选择: ${sessions[sIndex].label}\n`);
+    console.log(`\n✅ Selected: ${sessions[sIndex].label}\n`);
   }
 
   // Step 5: Update openclaw.json
@@ -137,23 +137,22 @@ async function main() {
   };
 
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-  console.log("✅ 配置已写入\n");
+  console.log("✅ Config saved.\n");
 
   // Step 6: Generate pluginId and show Webhook URL
   const webhookUrl = ensureWebhookUrl();
 
-  console.log("=".repeat(55));
-  console.log("🎉 安装完成！\n");
-  console.log("📋 你的 Webhook URL（永久有效，复制到 Pancake Dashboard）:\n");
-  console.log(`   ${webhookUrl}`);
+  console.log("=".repeat(60));
+  console.log("🎉 All set.\n");
+  console.log("📋 Your permanent Webhook URL — paste into the Pancake Dashboard:\n");
+  console.log(`   ${webhookUrl}\n`);
+  console.log("Next steps:");
+  console.log("  1. Restart OpenClaw");
+  console.log("  2. Open Pancake Dashboard → Settings → Webhooks");
+  console.log("  3. Paste the URL above, select events, save");
   console.log("");
-  console.log("下一步：");
-  console.log("  1. 重启 OpenClaw");
-  console.log("  2. 打开 Pancake Dashboard → Settings → Webhooks");
-  console.log("  3. 粘贴上面的 URL，勾选事件，保存");
-  console.log("");
-  console.log("随时查看 URL：openclaw-setup --url");
-  console.log("=".repeat(55) + "\n");
+  console.log("Show URL anytime:  openclaw-setup --url");
+  console.log("=".repeat(60) + "\n");
 
   rl.close();
 }
@@ -214,8 +213,8 @@ function scanSessions(agentId) {
 
       const isGroup = s.chatType === "group" || ctx.to.startsWith("chat:");
       const label = isGroup
-        ? `群聊 — ${s.displayName || ctx.to}`
-        : `私聊 — ${s.origin?.label || ctx.to.replace(/^user:/, "")}`;
+        ? `Group — ${s.displayName || ctx.to}`
+        : `Direct — ${s.origin?.label || ctx.to.replace(/^user:/, "")}`;
 
       targets.push({
         label,
@@ -273,6 +272,6 @@ function scanAgents() {
 }
 
 main().catch((err) => {
-  console.error("安装出错:", err.message);
+  console.error("Setup failed:", err.message);
   process.exit(1);
 });
