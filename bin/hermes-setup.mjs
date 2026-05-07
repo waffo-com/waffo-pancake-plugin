@@ -404,9 +404,11 @@ function buildHermesPrompt(platform) {
 Webhook payload fields available:
 - eventType, timestamp (ISO 8601 UTC), storeName, storeId, mode, eventId
 - data.{productName, amount, currency, taxAmount, buyerEmail, orderId,
-        interval, currentPeriodEnd, refundAmount, refundReason, failureReason,
-        cardLast4, effectiveEndDate, canceledAt}
+        billingPeriod, currentPeriodEnd, refundAmount, refundReason, failureReason,
+        paymentLast4, effectiveEndDate, canceledAt}
 - data.billingDetail.{country, isBusiness}
+- For canceled subscriptions, "Canceled At" can fall back to currentPeriodEnd
+  if canceledAt / effectiveEndDate is absent.
 
 Output ONLY the formatted notification text. No preamble, no JSON, no code fences.
 

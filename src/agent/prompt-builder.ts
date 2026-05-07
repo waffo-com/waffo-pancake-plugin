@@ -116,7 +116,7 @@ function fields(event: PancakeEvent, lang: Lang): Array<[string, string]> {
   ];
   const billingPeriod: [string, string] = [
     label("Billing Period", "订阅周期", lang),
-    asString(data.interval) ?? FALLBACK,
+    asString(data.billingPeriod) ?? FALLBACK,
   ];
   const nextCharge: [string, string] = [
     label("Next Charge", "下次扣款", lang),
@@ -124,7 +124,7 @@ function fields(event: PancakeEvent, lang: Lang): Array<[string, string]> {
   ];
   const cardLast4: [string, string] = [
     label("Card Last 4", "卡尾号", lang),
-    asString(data.cardLast4) ?? FALLBACK,
+    asString(data.paymentLast4) ?? FALLBACK,
   ];
   const periodEnds: [string, string] = [
     label("Period Ends", "到期日", lang),
@@ -136,7 +136,7 @@ function fields(event: PancakeEvent, lang: Lang): Array<[string, string]> {
   ];
   const canceledAt: [string, string] = [
     label("Canceled At", "终止时间", lang),
-    formatUtcTime(asString(data.canceledAt) ?? asString(data.effectiveEndDate) ?? event.timestamp),
+    formatUtcTime(asString(data.canceledAt) ?? asString(data.effectiveEndDate) ?? asString(data.currentPeriodEnd) ?? event.timestamp),
   ];
   const failureReason: [string, string] = [
     label("Failure Reason", "失败原因", lang),

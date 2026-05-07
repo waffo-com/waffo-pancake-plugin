@@ -87,7 +87,7 @@ describe("buildPrompt — Chinese (Feishu)", () => {
       rawData: {
         orderId: "ORD_x",
         taxAmount: "2.90",
-        interval: "monthly",
+        billingPeriod: "monthly",
         currentPeriodEnd: "2026-05-10T00:00:00.000Z",
         billingDetail: { country: "US", isBusiness: false },
       },
@@ -104,7 +104,7 @@ describe("buildPrompt — Chinese (Feishu)", () => {
       rawData: {
         orderId: "ORD_x",
         taxAmount: "2.90",
-        cardLast4: "4242",
+        paymentLast4: "4242",
         currentPeriodEnd: "2026-05-10T00:00:00.000Z",
         failureReason: "card_declined",
         billingDetail: { country: "US", isBusiness: false },
@@ -162,7 +162,7 @@ describe("buildPrompt — English (Discord/Telegram/Slack)", () => {
       rawData: {
         orderId: "ORD_x",
         taxAmount: "29.90",
-        interval: "yearly",
+        billingPeriod: "yearly",
         currentPeriodEnd: "2027-04-16T00:00:00.000Z",
         billingDetail: { country: "US", isBusiness: false },
       },
@@ -172,6 +172,66 @@ describe("buildPrompt — English (Discord/Telegram/Slack)", () => {
     expect(text).toContain("New Amount: USD 299.00 (incl. tax 29.90)");
     expect(text).toContain("Billing Period: yearly");
     expect(text).toContain("Next Charge: 2027-04-16");
+  });
+});
+
+describe("buildPrompt — real Pancake payload shape", () => {
+  // Field names taken from a live ~/.openclaw/pancake-state.json event on 2026-05-07
+  const realPaymentSucceededRaw = {
+    orderId: "ORD_1V0zVHOsyKkCUQbaQVcvRe",
+    orderStatus: "active",
+    buyerEmail: "huiling.mo@waffo.com",
+    currency: "USD",
+    amount: "3.00",
+    taxAmount: "0.00",
+    productName: "test2",
+    paymentId: "PAY_48aRwaQzo6hgiQqpjB6ugK",
+    paymentStatus: "succeeded",
+    paymentDate: "2026-05-05",
+    paymentMethod: "card",
+    paymentLast4: "4242",
+    billingPeriod: "weekly",
+    billingDetail: { country: "SG", isBusiness: false },
+  };
+
+  it("renders billingPeriod (not interval) and paymentLast4 (not cardLast4)", () => {
+    const text = buildPrompt({
+      deliveryId: "PAY_x",
+      eventId: "PAY_x",
+      originalType: "subscription.past_due",
+      category: "subscription",
+      status: "failed",
+      storeId: "STO_demo",
+      storeName: "Waffo Demo Store",
+      mode: "test",
+      summary: { productName: "test2", amount: "3.00", currency: "USD", buyerEmail: "huiling.mo@waffo.com" },
+      rawData: realPaymentSucceededRaw,
+      timestamp: "2026-05-05T13:20:17.800Z",
+    });
+    expect(text).toContain("卡尾号：4242");
+    expect(text).toContain("订单号：ORD_1V0zVHOsyKkCUQbaQVcvRe");
+    expect(text).not.toContain("卡尾号：—");
+  });
+
+  it("falls back to currentPeriodEnd for canceled subscription with no canceledAt", () => {
+    const text = buildPrompt({
+      deliveryId: "ORD_x",
+      eventId: "ORD_x",
+      originalType: "subscription.canceled",
+      category: "subscription",
+      status: "canceled",
+      storeId: "STO_demo",
+      storeName: "Waffo Demo Store",
+      mode: "test",
+      summary: { productName: "Pro", amount: "0.00", currency: "USD", buyerEmail: "x@waffo.com" },
+      rawData: {
+        orderId: "ORD_7LnCcUJuXZXbaSJR52i1vn",
+        billingPeriod: "monthly",
+        currentPeriodEnd: "2026-05-30",
+      },
+      timestamp: "2026-04-30T03:00:00.000Z",
+    });
+    expect(text).toContain("终止时间：2026-05-30 00:00 UTC");
   });
 });
 
