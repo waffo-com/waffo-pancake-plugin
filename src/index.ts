@@ -104,8 +104,13 @@ async function startNetworking(
   const pluginId = await store.getOrCreatePluginId();
   const relay = createRelayClient(pluginId);
 
-  // 2. Start tunnel
-  const tunnelManager = createTunnelManager(config.tunnel);
+  // 2. Start tunnel (auto-reconnect + re-register on URL change)
+  const tunnelManager = createTunnelManager(config.tunnel, {
+    onUrlChange: async (newUrl) => {
+      logger.info(`Tunnel URL changed — re-registering with relay: ${newUrl}`);
+      await relay.register(`${newUrl}/pancake/webhook`);
+    },
+  });
   const tunnelUrl = await tunnelManager.start();
 
   if (!tunnelUrl) {
